@@ -1,0 +1,61 @@
+---
+
+# this file is called in task1
+- name: Create .kube directory in user's home directory
+  file:
+    path: ~/.kube
+    state: directory
+    mode: 0755
+  register: kube_home_dir
+  ignore_errors: false
+
+- name: Copy kubernetes admin.conf to ~/.kube
+  shell: cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  register: kube_conf
+  when: kube_home_dir | succeeded
+  ignore_errors: false
+
+#- name: Waiting for k8s pods to get initialized
+#  wait_for: timeout=20
+#  register: pod_init_wait
+#  when: kube_home_dir | succeeded
+#  ignore_errors: false
+
+- name: Waiting for k8s pods to become ready
+  script: pods-waiting-check.sh
+  register: pod_script_check
+  when: kube_home_dir | succeeded
+  ignore_errors: false
+
+#- name: Waiting for pods to get initialized successfully
+#  wait_for:
+#    path: /tmp/pod-status-check.txt
+#    state: absent
+#  register: wait_to_remove_checkfile
+#  when: pod_script_check | succeeded
+#  ignore_errors: false
+
+- name: Get pods status
+  shell: kubectl get pods -n kube-system
+  register: kube_system_pods
+  when: (kube_conf | succeeded) and
+        (pod_script_check | succeeded)
+  ignore_errors: true
+
+- debug:
+    var: kube_system_pods.stdout
+  when: (kube_conf | succeeded) and
+        (kube_system_pods | succeeded)
+  ignore_errors: true
+
+- debug:
+    msg: "Kubernetes master has been deployed successfully!"
+  when: (kube_conf | succeeded) and
+        (kube_home_dir | succeeded)
+  ignore_errors: true
+
+- debug:
+    msg: "Note: kube-dns will be initialized after pod networks."
+  when: (kube_conf | succeeded) and
+        (kube_home_dir | succeeded)
+  ignore_errors: true

@@ -1,0 +1,15 @@
+---
+# Define load balancer DNS name or IP address in KUBERNETES_PUBLIC_ADDRESS variable
+
+
+k8s_master_ip: 10.71.154.60
+k8s_master_hostname: k8s-master
+
+k8s_worker1_ip: 10.71.154.63
+k8s_worker1_hostname: k8s-worker1
+
+k8s_worker2_ip: 10.71.154.64
+k8s_worker2_hostname: k8s-worker2
+
+kube_dns_yaml: https://storage.googleapis.com/kubernetes-the-hard-way/kube-dns.yaml
+kube_dashboard: https://raw.githubusercontent.com/kubernetes/dashboard/v1.6.3/src/deploy/kubernetes-dashboard.yaml

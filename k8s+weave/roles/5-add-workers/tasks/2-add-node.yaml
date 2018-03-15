@@ -1,0 +1,7 @@
+---
+
+# this file is called in task 1
+- name: Add worker node to cluster
+  script: /tmp/k8s-join.sh
+  register: add_node
+  ignore_errors: false

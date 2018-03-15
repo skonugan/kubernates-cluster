@@ -1,0 +1,28 @@
+---
+
+- name: List all nodes
+  command: kubectl get nodes
+  register: get_nodes
+  ignore_errors: false
+
+- debug:
+    var: get_nodes.stdout
+  ignore_errors: false
+
+
+- name: Deploy nginx
+  shell: kubectl run nginx --image=nginx --replicas=2
+  register: deploy_nginx
+  when: get_nodes | succeeded
+
+- name: NGINX pods getting created
+  wait_for: timeout=10
+  delegate_to: localhost
+
+- name: List nginx pods
+  shell: kubectl get pods -l run=nginx -o jsonpath="{.items[0].metadata.name}"
+  register: nginx_pod
+  when: deploy_nginx | succeeded
+- debug:
+    msg: " NGINX pods got created!"
+  when: nginx_pod | succeeded

@@ -1,0 +1,66 @@
+---
+
+- name: Check if any existing kubernetes pod running
+  shell: docker ps |grep -i kube
+  register: existing_pod_status
+  ignore_errors: true
+
+- debug:
+    msg: "Did not find any existing kubernetes pod. Kubeadm will Initialize this system as master!"
+  when: existing_pod_status | failed
+  ignore_errors: true
+
+- fail:
+    msg: "Found existing kubernetes pods. Kubeadm will initialize will be skipped."
+  when: existing_pod_status | succeeded
+  ignore_errors: true
+
+- name: Initialize kubernetes masters
+  shell: kubeadm init > /var/tmp/kubeadm-init.txt
+  register: kubeadm_init
+  ignore_errors: false
+
+- name: Get kubernetes Initialization msg
+  shell: cat /var/tmp/kubeadm-init.txt
+  register: k8s_init_output
+  when: kubeadm_init | succeeded
+- debug:
+    var: k8s_init_output.stdout
+
+- name: Store "kubeadm join token" to a shell script
+  shell: cat /var/tmp/kubeadm-init.txt |grep -i "kubeadm join" > /tmp/k8s-join.sh
+  register: token_store
+  when: kubeadm_init | succeeded
+  ignore_errors: false
+
+- name: Check if token got stored successfully
+  stat:
+    path: /tmp/k8s-join.sh
+  register: token_file
+  when: token_store | succeeded
+  ignore_errors: false
+
+- name: Get token
+  shell: cat /tmp/k8s-join.sh
+  register: get_token
+  when: token_file.stat.path is defined
+- debug:
+    var: get_token.stdout
+  when: token_file.stat.path is defined
+
+- name: Fetch token to local system
+  fetch:
+    src: /tmp/k8s-join.sh
+    dest: /tmp/
+    flat: yes
+  register: fetch_token
+  when: token_file.stat.path is defined
+
+- name: Delete /tmp/k8s-join.sh from master node
+  file:
+    path: /tmp/k8s-join.sh
+    state: absent
+
+- include: 2-kubectl-setup.yaml
+  when: (kubeadm_init | succeeded) and
+        (token_file.stat.path is defined)

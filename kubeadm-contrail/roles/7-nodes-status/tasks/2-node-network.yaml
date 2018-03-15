@@ -1,0 +1,20 @@
+---
+
+- name: Waiting for network pods to get initialized
+  script: node-contrail-pod-waiting-check.sh
+  register: node_net_script_check
+  ignore_errors: false
+
+- name: Get nodes details
+  shell: kubectl get nodes
+  register: get_nodes
+  when: node_net_script_check | succeeded
+  ignore_errors: false
+
+- debug:
+    var: get_nodes.stdout
+  when: get_nodes | succeeded
+
+- debug:
+    msg: "Kubernetes nodes have been deployed successfully!!!"
+  when: get_nodes | succeeded

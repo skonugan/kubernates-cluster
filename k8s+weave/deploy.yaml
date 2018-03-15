@@ -1,0 +1,57 @@
+---
+
+# Setup hosts and k8s package installation
+
+- hosts: all-k8s-hosts
+  become: true
+  become_method: sudo
+  vars_files:
+    - group_vars/all
+  roles:
+    - 1-k8s-pkgs
+
+- hosts: k8s-master
+  become: true
+  become_method: sudo
+  vars_files:
+    - group_vars/all
+  roles:
+    - 2-master-init
+
+#- hosts: k8s-masters
+#  vars_files:
+#    - group_vars/all
+#  roles:
+#    - 3-patch-kube-dns
+
+- hosts: k8s-master
+  become: true
+  become_method: sudo
+  vars_files:
+    - group_vars/all
+  roles:
+    - 4-pod-network-install
+
+- hosts: k8s-workers
+  become: true
+  become_method: sudo
+  vars_files:
+    - group_vars/all
+  roles:
+    - 5-add-workers
+
+- hosts: k8s-master
+  become: true
+  become_method: sudo
+  vars_files:
+    - group_vars/all
+  roles:
+    - 6-nodes-status
+
+- hosts: k8s-master
+  become: true
+  become_method: sudo
+  vars_files:
+    - group_vars/all
+  roles:
+    - 7-add-ons

@@ -1,0 +1,15 @@
+---
+
+- name: Check if node already have running container
+  shell: docker ps | grep -i kube
+  register: get_container
+  ignore_errors: true
+
+- fail:
+    msg: "Failed! Node already has running kube containers."
+  when: get_container | succeeded
+  ignore_errors: true
+
+- include: 2-add-node.yaml
+  when: get_container | failed
+  ignore_errors: true

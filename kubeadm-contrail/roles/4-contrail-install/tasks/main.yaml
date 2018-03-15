@@ -1,0 +1,55 @@
+---
+
+- name: Clone contrail-docker repository
+  command: git clone https://github.com/Juniper/contrail-docker.git -b R4.0
+  ignore_errors: false
+
+- name: Check of contrail-docker got cloned successfully
+  stat:
+    path: ~/contrail-docker/kubernetes/manifests/contrail-host-ubuntu.yaml
+  register: contrail_manifest
+  ignore_errors: false
+
+- debug:
+    msg: "cotrail-docker repo got cloned successfully!!!"
+  when: contrail_manifest.stat.path is defined
+  ignore_errors: true
+
+- name: Replace ~/contrail-docker/kubernetes/manifests/contrail-host-ubuntu.yaml file
+  template:
+    src: contrail-host-ubuntu.j2
+    dest: ~/contrail-docker/kubernetes/manifests/contrail-host-ubuntu.yaml
+    backup: yes
+    mode: 0644
+  register: contrail_yaml
+  when: contrail_manifest.stat.path is defined
+  ignore_errors: false
+
+- name: Deploy contrail
+  command: kubectl apply -f ~/contrail-docker/kubernetes/manifests/contrail-host-ubuntu.yaml
+  register: deploy_contrail
+  when: contrail_yaml | succeeded
+  ignore_errors: false
+
+- name: Waiting for contaril pods to get initialized successfully
+  script: pods-waiting-check.sh
+  register: pod_script_check
+  when: deploy_contrail | succeeded
+  ignore_errors: false
+
+- name: Get kube-system pods
+  shell: kubectl get pods -n kube-system
+  register: get_pods
+  when: (deploy_contrail | succeeded) and
+        (pod_script_check | succeeded)
+  ignore_errors: false
+
+- debug:
+    var: get_pods.stdout
+  when: (deploy_contrail | succeeded) and
+        (pod_script_check | succeeded)
+
+- debug:
+    msg: "Contrail pods has been deployed successfully!!!"
+  when: (deploy_contrail | succeeded) and
+        (pod_script_check | succeeded)

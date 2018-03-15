@@ -1,0 +1,71 @@
+---
+
+- hosts: localhost
+  vars_files:
+    - local_user.yaml
+  tasks:
+  - name: check ssh public key existance for current user
+    stat:
+      path: ~/.ssh/id_rsa.pub
+    register: pub_key
+
+#  - debug:
+#      msg: " file is exists."
+#    when: pub_key.stat.path is defined
+
+#  - debug:
+#      msg: " file does not exists."
+#    when: pub_key.stat.path is not defined
+
+  - name: Creating ssh key for local user
+    user:
+      name: "{{local_user}}"
+      generate_ssh_key: yes
+    when: pub_key.stat.path is not defined
+
+- hosts: k8s-servers
+  become: true
+  become_method: sudo
+  vars_files:
+    - remote_user.yaml
+  tasks:
+  - name: Check if user is already presented
+    shell: id {{ k8s_user }}
+    register: get_user
+    ignore_errors: true
+
+  - name: Setup | create user
+    user:
+      name: "{{ k8s_user }}"
+      group: sudo
+      shell: /bin/bash
+      generate_ssh_key: yes
+    register: create_user
+    when: get_user | failed
+    ignore_errors: false
+
+  - name: Setup | set user password
+    shell: usermod -p $(echo '{{ k8s_user_pass }}' | openssl passwd -1 -stdin) {{ k8s_user }}
+    register: set_password
+    when: (get_user | failed) and
+          (create_user | succeeded)
+    ignore_errors: false
+
+  - name: Setup | authorized key upload
+    authorized_key: user={{ k8s_user }}
+      key="{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      path='/home/{{ k8s_user }}/.ssh/authorized_keys'
+      manage_dir=no
+    when: (get_user | failed) and
+          (create_user | succeeded)
+    ignore_errors: false
+
+  - name: Sudoers | update sudoers file and validate
+    lineinfile: "dest=/etc/sudoers
+      insertafter=EOF
+      line='{{ k8s_user }} ALL=(ALL) NOPASSWD: ALL'
+      regexp='{{ k8s_user }} ALL=(ALL) NOPASSWD: ALL'
+      state=present"
+    when: (get_user | failed) and
+          (create_user | succeeded)
+    ignore_errors: false

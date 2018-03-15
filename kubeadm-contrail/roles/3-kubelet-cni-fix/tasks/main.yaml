@@ -1,0 +1,21 @@
+- name: Copy kubeadm conf file to all k8s systems to fix cni changes
+  template:
+    src: kubeadm-conf.j2
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    backup: yes
+    mode: 0644
+  register: kadm_conf_temp
+  ignore_errors: false
+
+- name: Reload systemd daemon
+  command: systemctl daemon-reload
+  register: daemon_reload
+  when: kadm_conf_temp | succeeded
+  ignore_errors: false
+
+- name: Restart kubelet service
+  service:
+    name: kubelet
+    state: restarted
+  when: (kadm_conf_temp | succeeded) and
+        (daemon_reload | succeeded)

@@ -1,0 +1,14 @@
+---
+
+- name: Waiting for nodes to get initialized
+  wait_for: timeout=20
+  register: node_init
+
+- name: Waiting for nodes to become ready
+  script: nodes-waiting-check.sh
+  register: node_check_script
+  when: node_init | succeeded
+  ignore_errors: false
+
+- include: 2-node-network.yaml
+  when: node_check_script | succeeded

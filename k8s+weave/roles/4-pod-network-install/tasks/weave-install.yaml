@@ -1,0 +1,33 @@
+---
+
+- name: Get kube version
+  shell: kubectl version | base64 | tr -d '\n'
+  register: kube_version
+
+- name: Deploy weave network
+  command: kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version={{kube_version.stdout}}"
+  register: deploy_weave
+  ignore_errors: false
+
+- name: Waiting for weave pods to get initialized
+  script: pods-waiting-check.sh
+  register: pod_script_check
+  when: deploy_weave | succeeded
+  ignore_errors: false
+
+- name: Get kube-system pods
+  shell: kubectl get pods -n kube-system
+  register: get_pods
+  when: (deploy_weave | succeeded) and
+        (pod_script_check | succeeded)
+  ignore_errors: false
+
+- debug:
+    var: get_pods.stdout
+  when: (deploy_weave | succeeded) and
+        (pod_script_check | succeeded)
+
+- debug:
+    msg: "Weave network has been installed successfully!!!"
+  when: (deploy_weave | succeeded) and
+        (pod_script_check | succeeded)

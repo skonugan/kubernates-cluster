@@ -1,0 +1,19 @@
+localhost ansible_connection=local
+
+# KVM office lab VMs
+k8s-master ansible_ssh_host=192.168.3.50
+k8s-worker1 ansible_ssh_host=192.168.3.51
+k8s-worker2 ansible_ssh_host=192.168.3.52
+
+
+[k8s-servers]
+k8s-master
+k8s-worker1
+k8s-worker2
+
+[masters]
+k8s-master
+
+[k8s-servers:vars]
+ansible_ssh_user=stack
+ansible_ssh_pass=redhat

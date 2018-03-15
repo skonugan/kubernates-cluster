@@ -1,0 +1,31 @@
+---
+
+- name: Check if kubectl working to get pods status
+  shell: kubectl get pods -n kube-system
+  register: kubectl_validation
+  ignore_errors: false
+
+- fail:
+    msg: "kubectl failed to get pods. Please check if .kube/admin.conf is configured properly, as defined in previous task!"
+  when: kubectl_validation | failed
+  ignore_errors: true
+
+- name: Patch kube-dns 'http://127.0.0.1:8081/readiness' Probe
+  script: kube-dns-readiness-probe-patch.sh
+  register: kdns_readiness_probe
+  when: kubectl_validation | succeeded
+  ignore_errors: false
+
+- debug:
+    msg: "http://127.0.0.1:8081/readiness Probe got patched successfully."
+  when: kdns_readiness_probe | succeeded
+
+- name: Patch kube-dns 'http://127.0.0.1:10054/healthcheck/kubedns' liveness probe
+  script: kube-dns-liveness-probe-patch.sh
+  register: kdns_liveness_probe
+  when: kubectl_validation | succeeded
+  ignore_errors: false
+
+- debug:
+    msg: "http://127.0.0.1:10054/healthcheck/kubedns Probe got patched successfully."
+  when: kdns_liveness_probe | succeeded

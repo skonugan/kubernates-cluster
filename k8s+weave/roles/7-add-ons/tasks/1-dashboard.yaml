@@ -1,0 +1,5 @@
+---
+
+- name: Install kubernetes dashboard
+  shell: kubectl apply -f {{kube_dashboard}}
+  ignore_errors: false

@@ -1,0 +1,32 @@
+---
+
+# this task is called in task1.
+- name: Update kubernetes apt cache
+  apt:
+    update_cache: yes
+  ignore_errors: false
+
+- name: Install kubeadm, kubelet and docker in all ubuntu systems
+  package:
+    name: "{{item}}"
+    state: latest
+  with_items:
+    - kubelet
+    - kubeadm
+    - docker.io
+    - kubectl
+  register: k8s_pkgs_install
+  ignore_errors: false
+
+- name: Get kubernetes version details
+  shell: kubeadm version
+  register: k8s_version
+  when: k8s_pkgs_install | succeeded
+- debug:
+    var: k8s_version.stdout
+  when: (k8s_pkgs_install | succeeded) and
+        (k8s_version | succeeded)
+
+- include: 3-kubeadm-svc-conf.yaml
+  when: (k8s_repo_file.stat.path is not defined) and
+        (k8s_pkgs_install | succeeded)

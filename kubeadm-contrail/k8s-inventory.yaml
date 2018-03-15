@@ -1,0 +1,23 @@
+#localhost ansible_connectio=local
+
+# KVM office lab VMs
+k8s-master ansible_ssh_host=10.71.154.60
+k8s-worker1 ansible_ssh_host=10.71.154.63
+k8s-worker2 ansible_ssh_host=10.71.154.64
+
+[all-k8s-hosts]
+k8s-master
+k8s-worker1
+k8s-worker2
+
+[k8s-master]
+k8s-master
+
+[k8s-workers]
+k8s-worker1
+k8s-worker2
+
+[all:vars]
+ansible_ssh_user=root
+ansible_ssh_pass=xenroot
+#ansible_ssh_private_key_file=~/.ssh/id_rsa

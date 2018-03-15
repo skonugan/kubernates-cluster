@@ -1,0 +1,57 @@
+---
+
+- name: Disable firewall in k8s ubuntu systems
+  service:
+    name: ufw
+    state: stopped
+    enabled: no
+  when: ansible_distribution == "Ubuntu"
+  ignore_errors: false
+
+#- name: Update apt cache
+#  apt:
+#    update_cache: yes
+#  ignore_errors: true
+
+- name: Install apt-transport-https and curl Packages
+  apt:
+    name: "{{item}}"
+    state: latest
+  with_items:
+    - apt-transport-https
+    - curl
+  ignore_errors: false
+
+- name: Check if kubernetes repo file already presented
+  stat:
+    path: /etc/apt/sources.list.d/kubernetes.list
+  register: k8s_repo_file
+  ignore_errors: false
+
+- fail:
+    msg: "/etc/apt/sources.list.d/kubernetes.list file is already presented. Please check if kubernetes already running!!!"
+  when: k8s_repo_file.stat.path is defined
+  ignore_errors: false
+
+- name: Add packages.cloud.google.com apt-key to systems
+  shell: curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+  register: add_apt_key
+  ignore_errors: false
+  when: k8s_repo_file.stat.path is not defined
+
+- name: Copy kubernetes repository template to all systems
+  template:
+    src: k8s-repo.j2
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    backup: yes
+    owner: root
+    mode: 0644
+  register: copy_k8s_repo_file
+  when: (add_apt_key | succeeded) and
+        (k8s_repo_file.stat.path is not defined)
+  ignore_errors: false
+
+- include: 2-k8s-pkg-install.yaml
+  when: (copy_k8s_repo_file | succeeded) and
+        (k8s_repo_file.stat.path is not defined)
+  ignore_errors: true
